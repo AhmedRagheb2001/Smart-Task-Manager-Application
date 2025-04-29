@@ -11,6 +11,9 @@ import javafx.geometry.Pos;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.control.PasswordField;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 public class LogIn extends Application
 {
 	public static void main (String [] args)
@@ -31,6 +34,21 @@ public class LogIn extends Application
 		Field2.setPromptText("Minimum 8 characters");
 		
 		Button SignIn = new Button ("Sign in");
+		//It will go to the dash board page
+		SignIn.setOnAction(e->
+		{
+				Alert alert = new Alert(AlertType.INFORMATION);
+				alert.setContentText("You have successed log in");
+				alert.showAndWait();
+				Dashboard dashboard = new Dashboard ();
+				BorderPane newDashboardRoot = dashboard.CreateDashboardPage();
+				Scene dashboardScene = new Scene (newDashboardRoot,500,300);
+				primaryStage.setScene(dashboardScene);
+				primaryStage.setTitle("Dashboard Page");
+				
+				
+		});
+		
 		Button SignOut = new Button ("Sign out");
 		
 		GridPane gridpane = new GridPane ();
@@ -59,4 +77,5 @@ public class LogIn extends Application
 		
 		
 	}
+	
 }
