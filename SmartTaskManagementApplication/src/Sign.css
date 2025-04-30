@@ -12,7 +12,7 @@
 
 
 .text-field, .password-field {
-    -fx-background-color: #ffffff;
+    -fx-background-color:#ffffff;
     -fx-border-color: #ccc;
     -fx-border-radius: 5;
     -fx-background-radius: 5;
