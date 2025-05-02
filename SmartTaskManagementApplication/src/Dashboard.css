@@ -16,3 +16,32 @@
 	-fx-font-weight:normal;
 }
 
+.menu-bar
+{
+	-fx-background-color:#2C3E50;
+}
+.menu-bar .label 
+{
+	-fx-text-fill:black;
+	-fx-padding: 3px 7px;
+	-fx-font-size: 14pt;
+}
+.menu .label :hover
+{
+	-fx-text-fill:white;
+	-fx-cursor:hand;
+}
+
+
+
+/* Style dropdown menu items */
+.menu-item {
+    -fx-font-size: 12pt;
+    -fx-text-fill: #2C3E50;
+}
+
+/* Hover effect for dropdown items */
+.menu-item:hover {
+    -fx-background-color: #1ABC9C;
+    -fx-text-fill: white;
+}

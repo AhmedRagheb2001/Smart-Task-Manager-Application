@@ -19,6 +19,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.Menu;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 public class UI extends Application
@@ -101,8 +102,48 @@ public class UI extends Application
 		vbox.setPrefHeight(150);
 		vbox.setAlignment(Pos.CENTER);
 		
+		//Now we will create the top region , which the Menu bar 
+		
+		MenuBar menubar = new MenuBar();
+		
+		Menu FileMenu = new Menu ("File");
+		Menu EditMenu = new Menu ("Edit");
+		Menu AboutMenu = new Menu ("About");
+		
+		//we will attach the menu bar with the drop down menus
+		menubar.getMenus().add(FileMenu);
+		menubar.getMenus().add(EditMenu);
+		menubar.getMenus().add(AboutMenu);
+		
+		//Now we will create the menu items for File Menu 
+		
+		MenuItem createItem = new MenuItem ("Create");
+		MenuItem searchItem = new MenuItem ("Search");
+		
+		//Now these are the menu items for Edit Menu
+		
+		MenuItem editItem = new MenuItem("Edit");
+		MenuItem deleteItem = new MenuItem ("Delete");
+		Menu sortItem = new Menu ("Sort");
+		
+		
+		//Now these are the items in the sort sub Menu
+		MenuItem AscendingItem = new MenuItem("Ascending");
+		MenuItem DescendingItem = new MenuItem("Descending");
+		
+		
+		// Now we will map these menu items to File menu
+		FileMenu.getItems().addAll(createItem,searchItem);
+		
+		//Now we will map the items of the Edit Menu
+		EditMenu.getItems().addAll(editItem,deleteItem,sortItem);
+		
+		//Now we will map the items of the Sort sub Menu
+		sortItem.getItems().addAll(AscendingItem,DescendingItem);
+		
 		root.setCenter(table);
 		root.setLeft(vbox);
+		root.setTop(menubar);
 		
 		Scene DashboardScene = new Scene (root,500,300);
 		DashboardScene.getStylesheets().add("Dashboard.css");
