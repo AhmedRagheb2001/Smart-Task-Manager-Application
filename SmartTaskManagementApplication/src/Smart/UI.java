@@ -64,8 +64,6 @@ public class UI extends Application
 		//To add the icon to the Application
 		Image icon = new Image ("icon.png");
 		
-		Scene SignInScene = new Scene (gridpane ,400,300);
-		SignInScene.getStylesheets().add("Sign.css");
 		
 		//Now This is for the Dash board page
 		
@@ -141,12 +139,40 @@ public class UI extends Application
 		//Now we will map the items of the Sort sub Menu
 		sortItem.getItems().addAll(AscendingItem,DescendingItem);
 		
+		
+		//Now we will create the right origin 
+		
+		Button SignUp = new Button ("Sign Up");
+		SignUp.getStyleClass().add("button-style");
+		
+		Button LogOut = new Button ("Log Out");
+		LogOut.getStyleClass().add("button-style");
+		
+		VBox vbox2 = new VBox(10,SignUp,LogOut);
+		vbox2.setAlignment(Pos.CENTER);
+		vbox2.setPrefWidth(200);
+		vbox2.setPrefHeight(150);
+		
+		
 		root.setCenter(table);
 		root.setLeft(vbox);
 		root.setTop(menubar);
+		root.setRight(vbox2);
+		
+		
+		//Now this is the signUp page here 
+		
+		GridPane parent = new GridPane ();
+		
 		
 		Scene DashboardScene = new Scene (root,500,300);
 		DashboardScene.getStylesheets().add("Dashboard.css");
+		
+		Scene SignInScene = new Scene (gridpane ,400,300);
+		SignInScene.getStylesheets().add("Sign.css");
+		
+		Scene SignUpScene = new Scene (parent,500,300);
+		
 		
 		//This is the action event for the signIn button in sign in page(it will go to the dash board page)
 		SignIn.setOnAction(e->
@@ -160,6 +186,17 @@ public class UI extends Application
 				
 		});
 		
+		//This is the functionality of the SignUp button 
+		SignUp.setOnAction(e->
+		{
+			primaryStage.setScene(SignUpScene);
+		});
+		
+		//Now This is the functionality of the Logout button 
+		LogOut.setOnAction(e->
+		{
+			primaryStage.setScene(SignInScene);
+		});
 		
 		primaryStage.setScene(SignInScene);
 		primaryStage.setTitle("Smart Task Mangement Application");
