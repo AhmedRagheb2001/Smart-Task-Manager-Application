@@ -13,7 +13,9 @@ import javafx.geometry.Pos;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.control.PasswordField;
-
+import java.io.*;
+import java.io.IOException;
+import java.net.*;
 public class LogIn extends Application {
 	
 	public static void main (String [] args)
@@ -52,17 +54,40 @@ public class LogIn extends Application {
 		gridpane.setVgap(20);
 		
 		
-		SignIn.setOnAction(e->
-		{
-				Alert alert = new Alert(AlertType.INFORMATION);
-				alert.setContentText("You have successed log in");
-				alert.showAndWait();
-				
-				DashBoard dash = new DashBoard();
-				dash.start(primaryStage );
-				
-				
+		SignIn.setOnAction(e -> {
+		    String name = Field1.getText();
+		    String password = Field2.getText();
+
+		    if (name.isEmpty() || password.isEmpty()) {
+		        showAlert("Please fill in all fields.");
+		    } else if (password.length() < 8) {
+		        showAlert("The password should be at least 8 characters.");
+		    } else {
+		        try (Socket socket = new Socket("localhost", 8003);
+		             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+		             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+		            out.println("Login : " + name);
+		            String response = in.readLine();
+
+		            if ("OK".equalsIgnoreCase(response)) {
+		                Alert alert = new Alert(AlertType.INFORMATION);
+		                alert.setContentText("You have successfully logged in.");
+		                alert.showAndWait();
+
+		                DashBoard dash = new DashBoard(socket,name);
+		                dash.start(primaryStage);
+		            } else {
+		                showAlert("Username already in use. Try another one.");
+		            }
+
+		        } catch (IOException ex) {
+		            showAlert("Could not connect to the server. Is it running?");
+		            ex.printStackTrace();
+		        }
+		    }
 		});
+
 		
 		SignUp.setOnAction(e->
 		{
@@ -77,9 +102,19 @@ public class LogIn extends Application {
 		primaryStage.getIcons().add(icon);
 		
 		Scene scene = new Scene(gridpane, 500 ,300);
+		scene.getStylesheets().add("Sign.css");
+		
 		primaryStage.setScene(scene);
 		primaryStage.setTitle("Smart Task Manager Application");
 		primaryStage.show();
+		primaryStage.centerOnScreen();
 	}
+	private void showAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
 
 }

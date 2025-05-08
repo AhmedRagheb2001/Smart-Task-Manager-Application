@@ -6,8 +6,10 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.geometry.Pos;
 import javafx.geometry.Insets;
+import java.net.*;
 public class SignUp extends Application {
-
+	
+	private Socket socket;
     @Override
     public void start(Stage primaryStage) {
         // Title
@@ -59,7 +61,7 @@ public class SignUp extends Application {
                 showAlert("Passwords do not match.");
             } else {
                 showAlert("Sign up successful!");
-                DashBoard dash = new DashBoard();
+                DashBoard dash = new DashBoard(socket,name);
                 dash.start(primaryStage);
             }
         });

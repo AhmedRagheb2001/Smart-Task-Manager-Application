@@ -2,12 +2,17 @@
 {
 	-fx-font-size : 25pt;
 	-fx-font-weight:bold ;
-	-fx-text-fill:white;
+	-fx-text-fill:black;
+}
+.label-form
+{
+	-fx-font-size :10pt;
+	-fx-font-weight:bold;
 }
 .root
 {
 
-	-fx-background-color:#1ABC9C;
+	-fx-background-color:#f5f5f5;
 }
 .table-style
 {
@@ -18,7 +23,7 @@
 
 .menu-bar
 {
-	-fx-background-color:#2C3E50;
+	-fx-background-color:#c0c0c0;
 }
 .menu-bar .label 
 {
@@ -50,7 +55,7 @@
 	-fx-padding :10px;
 	-fx-border-radius :15px;
 	-fx-background-radius:15px;
-	-fx-background-color:blue;
+	-fx-background-color:#c0c0c0;
 	-fx-text-fill:black;
 }
 .button .label :hover

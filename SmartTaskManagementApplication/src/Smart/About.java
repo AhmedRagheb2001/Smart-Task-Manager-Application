@@ -4,12 +4,15 @@ import javafx.stage.Stage;
 import javafx.scene.Scene;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.Label;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.geometry.Pos;
 import javafx.geometry.Insets;
+import java.net.*;
 public class About extends Application{
+	private Socket socket;
 	@Override
 	public void start(Stage primaryStage)
 	{
@@ -17,7 +20,7 @@ public class About extends Application{
 		
 		TextArea textArea = new TextArea();
 		textArea.setPrefHeight(60);
-		textArea.setPrefWidth(150);
+		textArea.setPrefWidth(250);
 		
 		Label label2 = new Label ("Enter any Suggestion : ");
 		Label label3 = new Label ("");
@@ -25,11 +28,28 @@ public class About extends Application{
 		Button submit = new Button ("Submit");
 		submit.setOnAction(e->
 		{
-			label3.setText("Thanks for your suggestion");
+			String suggestion = textArea.getText();
+			
+			if(suggestion.isEmpty())
+			{
+				showAlert("Please enter any suggestion");
+			}
+			else
+			{
+				label3.setText("Thanks for your suggestion");
+			}
 		});
 		
+		Button back = new Button ("Back");
+		back.setOnAction(e->
+		{
+			DashBoard dashboard = new DashBoard(socket);
+			dashboard.start(primaryStage);
+			
+		});
 		HBox hbox = new HBox (10,label2,textArea);
 		hbox.setAlignment(Pos.CENTER);
+		
 		
 		VBox vbox = new VBox (20,label1,hbox,submit,label3);
 		vbox.setPadding(new Insets(20));
@@ -40,4 +60,15 @@ public class About extends Application{
 		primaryStage.show();
 	}
 	
+	private void showAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+	
+//	public static void main (String [] args)
+//	{
+//		launch(args);
+//	}
 }
