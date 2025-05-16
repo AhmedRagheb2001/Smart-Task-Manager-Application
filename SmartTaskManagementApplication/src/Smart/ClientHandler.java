@@ -1,181 +1,253 @@
 package Smart;
 
-import java.io.*;
-import java.net.Socket;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
+import java.net.*;
+import java.io.*;
 import java.util.Set;
-import java.util.Collections;
 
 public class ClientHandler implements Runnable {
-    private final Socket socket;
-    private final Set<String> usernames;
-    private final Set<Task> tasks;
-    private String currentUser; // Store the username of the logged-in user
-
-    public ClientHandler(Socket clientSocket, Set<String> names, Set<Task> taskList) {
+    
+    private Socket socket = null;
+    private Set<String> usernames;
+    private Set<Task> tasks;
+    private String username;
+    public ClientHandler(Socket clientSocket, Set<String> names, Set<Task> clientTasks) {
         this.socket = clientSocket;
-        this.usernames = Collections.synchronizedSet(names);
-        this.tasks = Collections.synchronizedSet(taskList);
-        this.currentUser = null; // Initially, the user is not logged in
+        this.usernames = names;
+        this.tasks = clientTasks;
     }
 
     @Override
     public void run() {
-        try (
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-        ) {
-            String line;
-            while ((line = in.readLine()) != null) {
-                String[] parts = line.trim().split(" ", 2); // Split command from arguments
-                String command = parts[0].toUpperCase();
+        try (Connection conn = Database.getConnection()) { // Open connection once at the start
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+            String line = null;
 
-                switch (command) {
-                    case "LOGIN":
-                        handleLogin(parts, out);
-                        break;
-                    case "CREATE":
-                        handleCreate(parts, out);
-                        break;
-                    case "EDIT":
-                        handleEdit(parts, out);
-                        break;
-                    case "DELETE":
-                        handleDelete(parts, out);
-                        break;
-                    default:
-                        out.println("Unknown command.");
+            while (true) {
+                try {
+                    line = (String) in.readObject();
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                } catch (SocketException e) {
+                    System.err.println("Connection reset, client might have disconnected: " + e.getMessage());
+                    break;
+                }
+
+                if (line.startsWith("Login : ")) {
+                    LoginHandler(out, line, usernames, tasks, conn);
+                } else if (line.startsWith("Create : ")) {
+                    try {
+                        CreateHandler(in, tasks, conn);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                } else if (line.startsWith("Edit : ")) {
+                    try {
+                        EditHandler(in, tasks, conn);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                } else if (line.startsWith("Save : ")) {
+                    saveHandler(tasks);
+                } else if (line.startsWith("Delete : ")) {
+                    try {
+                        DeleteHandler(in, tasks, conn);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                } else if (line.startsWith("End : ")) {
+                    LogoutHandler(out,usernames);
+                } else if (line.startsWith("Retrieve : ")) {
+                    out.writeObject(tasks);
+                    out.flush();
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        } catch (SQLException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
     }
 
-    private void handleLogin(String[] parts, PrintWriter out) {
-        if (parts.length < 2) {
-            out.println("Usage: LOGIN username");
-            return;
+    public void LoginHandler(ObjectOutputStream out, String line, Set<String> usernames, Set<Task> tasks, Connection conn) throws IOException {
+        this.username = line.substring(8).trim();
+        synchronized (usernames) {
+            if (usernames.contains(username)) {
+                out.writeObject("Denied");
+            } else {
+                out.writeObject("OK");
+                usernames.add(username);
+                System.out.println("Connection is established");
+                System.out.printf("Login by : %s%n", username);
+                getAllTasksFromDatabase(tasks, conn);
+            }
         }
-
-        String username = parts[1];
-        if (usernames.contains(username)) {
-            out.println("Denied");
-        } else {
-            usernames.add(username);
-            currentUser = username;
-            out.println("OK");
-            System.out.println(username + " logged in.");
-        }
+        out.flush();
+    }
+    public void LogoutHandler (ObjectOutputStream out,Set<String> usernames) throws IOException
+    {
+    	usernames.remove(this.username);
+    	out.writeObject("OK");
+    	out.flush();
+    	System.out.printf("Logout by : %s%n", username);
     }
 
-    private void handleCreate(String[] parts, PrintWriter out) {
-        if (currentUser == null) {
-            out.println("You must log in first.");
-            return;
-        }
-        if (parts.length < 2) {
-            out.println("Usage: CREATE taskName description deadline priority");
-            return;
-        }
-
-        // Example: CREATE task1 Finish homework 2025-05-10 HIGH
-        String[] taskParts = parts[1].split(" ", 4);
-        if (taskParts.length < 4) {
-            out.println("Invalid format. Usage: CREATE taskName description deadline priority");
-            return;
-        }
-
-        String name = taskParts[0];
-        String description = taskParts[1];
-        LocalDate deadline;
-        Task.Priority priority;
-
+     public void CreateHandler(ObjectInputStream input, Set<Task> tasks, Connection conn) throws ClassNotFoundException, IOException {
         try {
-            deadline = LocalDate.parse(taskParts[2]);
-            priority = Task.Priority.valueOf(taskParts[3].toUpperCase());
-        } catch (DateTimeParseException | IllegalArgumentException e) {
-            out.println("Invalid date or priority. Make sure the date is in yyyy-MM-dd format and priority is LOW, MEDIUM, or HIGH.");
-            return;
-        }
+            synchronized (tasks) {
+                Task task = (Task) input.readObject();
+                tasks.add(task);
+                System.out.printf("Task with name : %s%n is added", task.getName());
 
-        Task newTask = new Task(name, description, deadline, Task.Status.PENDING, priority, currentUser);
-        tasks.add(newTask);
-        out.println("Task created: " + name);
-        System.out.println("Task created: " + newTask);
+                // Save task to database
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "INSERT INTO tasks (name, description, deadline, status, priority) VALUES (?, ?, ?, ?, ?)")) {
+                    stmt.setString(1, task.getName());
+                    stmt.setString(2, task.getDescription());
+                    stmt.setString(3, task.getDeadLine().toString()); // Convert LocalDate to String
+                    stmt.setString(4, task.getStatus().toString());  // Store enum value as string
+                    stmt.setString(5, task.getPriority().toString()); // Store enum value as string
+                    stmt.executeUpdate();
+                    System.out.println("Task inserted into database.");
+                } catch (SQLException e) {
+                    System.err.println("Database error while inserting task:");
+                    e.printStackTrace();
+                }
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Error while handling task creation:");
+            e.printStackTrace();
+        }
     }
 
-    private void handleEdit(String[] parts, PrintWriter out) {
-        if (currentUser == null) {
-            out.println("You must log in first.");
-            return;
-        }
-        if (parts.length < 2) {
-            out.println("Usage: EDIT taskName newDescription newDeadline newPriority");
-            return;
-        }
-
-        // Example: EDIT task1 New description 2025-06-01 HIGH
-        String[] taskParts = parts[1].split(" ", 4);
-        if (taskParts.length < 4) {
-            out.println("Invalid format. Usage: EDIT taskName newDescription newDeadline newPriority");
-            return;
-        }
-
-        String name = taskParts[0];
-        String newDescription = taskParts[1];
-        LocalDate newDeadline;
-        Task.Priority newPriority;
-
-        try {
-            newDeadline = LocalDate.parse(taskParts[2]);
-            newPriority = Task.Priority.valueOf(taskParts[3].toUpperCase());
-        } catch (DateTimeParseException | IllegalArgumentException e) {
-            out.println("Invalid date or priority. Make sure the date is in yyyy-MM-dd format and priority is LOW, MEDIUM, or HIGH.");
-            return;
-        }
-
+    public void EditHandler(ObjectInputStream input, Set<Task> tasks, Connection conn) throws ClassNotFoundException, IOException {
+        Task editTask = (Task) input.readObject();
+        Task taskToRemove = null;
         synchronized (tasks) {
-            boolean found = false;
             for (Task task : tasks) {
-                if (task.getName().equals(name) && task.getOwner().equals(currentUser)) {
-                    // Modify the task
-                    tasks.remove(task);
-                    task.setDescription(newDescription);
-                    task.setDeadLine(newDeadline);
-                    task.setPriority(newPriority);
-                    tasks.add(task);
-                    out.println("Task edited: " + name);
-                    found = true;
+                if (task.getName().equals(editTask.getName())) {
+                    taskToRemove = task;
                     break;
                 }
             }
-            if (!found) {
-                out.println("Task not found or you do not own it.");
+            if (taskToRemove != null) {
+                tasks.remove(taskToRemove);
+                tasks.add(editTask);
             }
         }
-    }
 
-    private void handleDelete(String[] parts, PrintWriter out) {
-        if (currentUser == null) {
-            out.println("You must log in first.");
-            return;
-        }
-        if (parts.length < 2) {
-            out.println("Usage: DELETE taskName");
-            return;
-        }
+        // Update task in the database
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "UPDATE tasks SET name = ?, description = ?, deadline = ?, status = ?, priority = ? WHERE name = ?")) {
+            stmt.setString(1, editTask.getName()); // Set the new name (at position 1)
+            stmt.setString(2, editTask.getDescription()); // Set the description (at position 2)
+            stmt.setString(3, editTask.getDeadLine().toString()); // Set the deadline (at position 3)
+            stmt.setString(4, editTask.getStatus().toString()); // Set the status (at position 4)
+            stmt.setString(5, editTask.getPriority().toString()); // Set the priority (at position 5)
+            stmt.setString(6, editTask.getName()); // Set the original name for the WHERE clause (position 6)
 
-        String name = parts[1];
-
-        synchronized (tasks) {
-            boolean removed = tasks.removeIf(task -> task.getName().equals(name) && task.getOwner().equals(currentUser));
-            if (removed) {
-                out.println("Task deleted: " + name);
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                System.out.println("Task updated in database.");
             } else {
-                out.println("Task not found or you do not own it.");
+                System.out.println("Task not found in database (not updated).");
             }
+        } catch (SQLException e) {
+            System.err.println("Failed to update task in database:");
+            e.printStackTrace();
         }
     }
+
+    public void DeleteHandler(ObjectInputStream input, Set<Task> tasks, Connection conn) throws ClassNotFoundException, IOException {
+        Task removedTask = (Task) input.readObject();
+        Task taskToRemove = null;
+        synchronized (tasks) {
+            for (Task task : tasks) {
+                if (task.getName().equals(removedTask.getName())) {
+                    taskToRemove = task;
+                    break;
+                }
+            }
+            if (taskToRemove != null) {
+                tasks.remove(taskToRemove);
+            }
+        }
+
+        // Delete task from the database
+        try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM tasks WHERE name = ?")) {
+            stmt.setString(1, removedTask.getName());
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                System.out.println("Task deleted from database.");
+            } else {
+                System.out.println("Task not found in database (not deleted).");
+            }
+        } catch (SQLException e) {
+            System.err.println("Failed to delete task from database:");
+            e.printStackTrace();
+        }
+    }
+
+    public void saveHandler(Set<Task> tasks) {
+        System.out.println("Name\tDescription\tDeadLine\tStatus\tPriority");
+        for (Task task : tasks) {
+            System.out.printf("The name of the Task is : %s\t", task.getName());
+            System.out.printf("The description of the Task is : %s\t", task.getDescription());
+            System.out.printf("The deadline of the Task is : %s\t", task.getDeadLine());
+            System.out.printf("The status of the Task is : %s\t", task.getStatus());
+            System.out.printf("The priority of the Task is : %s\t", task.getPriority());
+        }
+    }
+
+    public void getAllTasksFromDatabase(Set<Task> tasks, Connection conn) {
+        String sql = "SELECT name, description, deadline, status, priority FROM tasks";
+        try (PreparedStatement stmt = conn.prepareStatement(sql); ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                String name = rs.getString("name");
+                String description = rs.getString("description");
+                LocalDate deadline = LocalDate.parse(rs.getString("deadline"));
+                String status = rs.getString("status");
+                String priority = rs.getString("priority");
+
+                Task task = new Task(name, description, deadline, Task.Status.valueOf(status), Task.Priority.valueOf(priority));
+                tasks.add(task);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching tasks from the database:");
+            e.printStackTrace();
+        }
+    }
+    public void ResearchHandler (ObjectOutputStream out ,Set<Task> tasks,String Line)
+    {
+    	try
+    	{
+    		
+	    	String name = Line.substring(9).trim();
+			for(Task task : tasks)
+			{
+				if(task.getName().equals(name))
+				{
+					
+						out.writeObject(task);
+						break;
+					
+				}
+				else
+				{
+					out.writeObject(null);
+				}
+			}
+    	}
+		catch (IOException e) {
+		
+		e.printStackTrace();
+	}
+    
+  }
 }

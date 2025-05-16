@@ -3,6 +3,7 @@ package Smart;
 import java.net.Socket;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -24,24 +25,33 @@ import javafx.collections.ObservableList;
 import javafx.collections.FXCollections;
 import javafx.scene.control.DatePicker;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import javafx.scene.control.ComboBox;
 import java.net.*;
 import java.io.*;
-
 public class DashBoard extends Application {
-	private ObservableList <Task> data =FXCollections.observableArrayList();
+	private Set<Task> tasksFromServer;
+	private ObservableList <Task> data ;
 	private Socket socket;
 	private String username;
-    public DashBoard(Socket socket,String name) {
+	private ObjectInputStream in;
+	private ObjectOutputStream out;
+    public DashBoard(Socket socket,String name,ObjectInputStream input , ObjectOutputStream output) {
 		// TODO Auto-generated constructor stub
     	this.username= name;
     	this.socket=socket;
+    	this.in= input;
+    	this.out =output;
 	}
 
 	@Override
     public void start(Stage primaryStage) {
         
     	//Now This is for the Dash board page
+			
 		
     			BorderPane root = new BorderPane ();
     			
@@ -66,13 +76,16 @@ public class DashBoard extends Application {
     			TableColumn<Task,Task.Priority> priorityColumn = new TableColumn<>("Priority");
     			priorityColumn.setCellValueFactory(new PropertyValueFactory<>("priority"));
     			
-    			table.setItems(data);
     			
     			table.getColumns().add(nameColumn);
     			table.getColumns().add(descriptionColumn);
     			table.getColumns().add(deadlineColumn);
     			table.getColumns().add(statusColumn);
     			table.getColumns().add(priorityColumn);
+    			
+    			data = FXCollections.observableArrayList();
+    	    	table.setItems(data);
+    	    	receiveTasksFromServer();
     			
     			//This is the left region
     			
@@ -114,6 +127,21 @@ public class DashBoard extends Application {
     				root.setBottom(SearchForm());
     			});
     			
+    			MenuItem saveItem = new MenuItem ("Save");
+    			saveItem.setOnAction(e->
+    			{
+    				new Thread(()->
+    				{
+    					try {
+    						out.writeObject("Save : ");
+    						out.flush();
+    					} catch (IOException e1) {
+    						
+    						e1.printStackTrace();
+    					}
+    				}).start();
+    			});
+    			
     			//Now these are the menu items for Edit Menu
     			
     			MenuItem editItem = new MenuItem("Edit");
@@ -129,25 +157,87 @@ public class DashBoard extends Application {
     			Menu sortItem = new Menu ("Sort");
     			Menu filterItem = new Menu("Filter");
     			
+    			Menu PriorityItem = new Menu("Priority");
+    			Menu CompletionItem = new Menu ("Completion status");
+    			Menu OverdueItem = new Menu ("Overdue tasks");
+    			
     			//Now these are the items in the sort sub Menu
     			MenuItem AscendingItem = new MenuItem("Ascending");
+    			AscendingItem.setOnAction(e->
+    			{
+    				FXCollections.sort(data, Comparator.comparing(Task::getDeadLine));
+    			});
     			MenuItem DescendingItem = new MenuItem("Descending");
     			
+    			DescendingItem.setOnAction(e->
+    			{
+    				FXCollections.sort(data,Comparator.comparing(Task::getDeadLine).reversed());
+    			});
     			
     			//These are the items in the filter sub menu
     			MenuItem completeItem = new MenuItem("Completed");
-    			MenuItem overdueItem = new MenuItem("Overdue");
+    			completeItem.setOnAction(e->
+    			{
+    				ObservableList<Task> filteredData = FXCollections.observableArrayList(
+    				        data.stream()
+    				            .filter(task -> task.getStatus() == Task.Status.COMPLETED) // Filter completed tasks
+    				            .collect(Collectors.toList())
+    				    );
+    				    table.setItems(filteredData);
+    			});
+    			MenuItem pendingItem = new MenuItem("Pending");
+    			pendingItem.setOnAction(e->
+    			{
+    				ObservableList<Task> filteredData = FXCollections.observableArrayList(
+    				        data.stream()
+    				            .filter(task -> task.getStatus() == Task.Status.PENDING) // Filter completed tasks
+    				            .collect(Collectors.toList())
+    				    );
+    				    table.setItems(filteredData);
+    			});
     			
+    			MenuItem HighItem = new MenuItem ("High");
+    			HighItem.setOnAction(e->
+    			{
+    				ObservableList<Task> filteredData = FXCollections.observableArrayList(
+    				        data.stream()
+    				            .filter(task -> task.getPriority() == Task.Priority.HIGH) // Filter completed tasks
+    				            .collect(Collectors.toList())
+    				    );
+    				    table.setItems(filteredData);
+    			});
+    			MenuItem MediumItem = new MenuItem("Medium");
+    			MediumItem.setOnAction(e->
+    			{
+    				ObservableList<Task> filteredData = FXCollections.observableArrayList(
+    				        data.stream()
+    				            .filter(task -> task.getPriority() == Task.Priority.MEDIUM) // Filter completed tasks
+    				            .collect(Collectors.toList())
+    				    );
+    				    table.setItems(filteredData);
+    				
+    			});
+    			MenuItem LowItem = new MenuItem ("Low");
+    			LowItem.setOnAction(e->
+    			{
+    				ObservableList<Task> filteredData = FXCollections.observableArrayList(
+    				        data.stream()
+    				            .filter(task -> task.getPriority() == Task.Priority.LOW) // Filter completed tasks
+    				            .collect(Collectors.toList())
+    				    );
+    				    table.setItems(filteredData);
+    				
+    			});
     			// This is the item of the About Menu
     			MenuItem aboutItem = new MenuItem ("About");
     			aboutItem.setOnAction(e->
     			{
-    				About about= new About();
+    				About about= new About(socket,username,in,out);
     				about.start(primaryStage);
     			});
     			
     			// Now we will map these menu items to File menu
-    			FileMenu.getItems().addAll(createItem,searchItem);
+    			FileMenu.getItems().addAll(createItem,searchItem,saveItem);
     			
     			//Now we will map the items of the Edit Menu
     			EditMenu.getItems().addAll(editItem,deleteItem,sortItem,filterItem);
@@ -156,15 +246,20 @@ public class DashBoard extends Application {
     			sortItem.getItems().addAll(AscendingItem,DescendingItem);
     			
     			//Now we will map the items of the filter sub menu
-    			filterItem.getItems().addAll(completeItem,overdueItem);
+    			filterItem.getItems().addAll(PriorityItem,CompletionItem,OverdueItem);
     			//Now we map the about menu item
     			AboutMenu.getItems().add(aboutItem);
+    			
+    			CompletionItem.getItems().addAll(pendingItem,completeItem);
+    			
+    			PriorityItem.getItems().addAll(LowItem,MediumItem,HighItem);
+    			
     			//Now we will create the right origin 
     			
     			Button SignUp = new Button ("Sign Up");
     			SignUp.setOnAction(e->
     			{
-    				SignUp signup = new SignUp();
+    				SignUp signup = new SignUp(socket,username,in,out);
     				signup.start(primaryStage);
     			});
     			
@@ -190,8 +285,37 @@ public class DashBoard extends Application {
     			
     			LogOut.setOnAction(e->
     			{
-    				LogIn login = new LogIn();
-    				login.start(primaryStage);
+    				
+    				new Thread (()->
+    				{
+    					try
+        				{
+        					
+        					out.writeObject("End : ");
+        					out.flush();
+        					try {
+    							String response = (String)in.readObject();
+    							if (response.equals("OK")) {
+    							    Platform.runLater(() -> {
+    							        try {
+    							            LogIn login = new LogIn();
+    							            login.start(primaryStage);
+    							            showAlert("You have been logged out!");
+    							        } catch (Exception ex) {
+    							            ex.printStackTrace();
+    							        }
+    							    });
+    							}
+    						} catch (ClassNotFoundException e1) {
+    							
+    							e1.printStackTrace();
+    						}
+        				}
+        				catch(IOException ex)
+        				{
+        					ex.printStackTrace();
+        				}
+    				}).start();
     				
     			});
     			
@@ -227,6 +351,7 @@ public class DashBoard extends Application {
 		priorityComboBox.getItems().setAll(Task.Priority.values());
 		priorityComboBox.setValue(Task.Priority.MEDIUM);
 		
+		
 		Button createButton = new Button ("Create");
 		createButton.setOnAction(e->
 		{
@@ -242,7 +367,7 @@ public class DashBoard extends Application {
 			status=statusComboBox.getValue();
 			priority =priorityComboBox.getValue();
 			
-			if(name.isEmpty() || description.isEmpty())
+			if(name.isEmpty() || description.isEmpty() || deadLine == null || status == null || priority == null)
 			{
 				showAlert("Please fill the fields");
 			}
@@ -251,17 +376,22 @@ public class DashBoard extends Application {
 				Task task = new Task (name,description,deadLine,status,priority);
 				
 				data.add(task);
-				try
+				
+				new Thread(()->
 				{
-					ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-					PrintWriter output = new PrintWriter(socket.getOutputStream());
-					output.println("Create : ");
-					out.writeObject(task);
-				}
-				catch(IOException ex)
-				{
-					ex.printStackTrace();
-				}
+					try
+					{
+						
+						
+						out.writeObject("Create : ");
+						out.writeObject(task);
+						out.flush();
+					}
+					catch(IOException ex)
+					{
+						ex.printStackTrace();
+					}
+				}).start();
 				
 				
 			}
@@ -285,7 +415,6 @@ public class DashBoard extends Application {
     	Label nameLabel = new Label ("Enter the name of the task : ");
     	nameLabel.getStyleClass().add("label-form");
     	TextField Field = new TextField ();
-    	
     	Label label1 = new Label();
     	Label label2 = new Label();
     	Label label3 = new Label();
@@ -295,7 +424,28 @@ public class DashBoard extends Application {
     	Button searchButton = new Button ("Search");
     	searchButton.setOnAction(e->
     	{
-    		// here we will do it later
+    		String name = Field.getText();
+    		new Thread(()->
+    		{
+    			
+    			try {
+    				out.writeObject("Search : "+name);
+    				
+					Task task =(Task)in.readObject();
+					label1.setText("The name of the task is : "+task.getName());
+					label2.setText("The description of the task is : "+task.getDescription());
+					label3.setText("The deadline of the task is : "+task.getDeadLine());
+					label4.setText("The status of the task is : "+task.getStatus());
+					label5.setText("The priority of the task is : "+task.getPriority());
+				} catch (ClassNotFoundException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+    			
+    		}).start();
     	});
     	HBox hbox = new HBox (10,nameLabel,Field,searchButton);
     	hbox.setPadding(new Insets(10));
@@ -350,6 +500,7 @@ public class DashBoard extends Application {
             if (name.isEmpty() || description.isEmpty()) {
                 showAlert("Please fill all fields.");
             } else {
+            	showAlert("You have edited a task !");
                 selectedTask.setName(name);
                 selectedTask.setDescription(description);
                 selectedTask.setDeadLine(deadLine);
@@ -357,6 +508,23 @@ public class DashBoard extends Application {
                 selectedTask.setPriority(priority);
                 table.refresh(); // refresh table to show updated values
                 showAlert("Task updated successfully.");
+            	
+                new Thread(()->
+                {
+                	try
+    				{
+    					
+    					
+    					out.writeObject("Edit : ");
+    					out.writeObject(selectedTask);
+    					out.flush();
+    				}
+    				catch(IOException ex)
+    				{
+    					ex.printStackTrace();
+    				}
+                }).start();
+				
             }
         });
 
@@ -377,9 +545,22 @@ public class DashBoard extends Application {
         if (selectedTask == null) {
             showAlert("Please select a task to delete.");
         } else {
+        	showAlert("You have deleted a task !");
             data.remove(selectedTask);
             table.refresh(); // Optional, but ensures UI updates immediately
             showAlert("Task deleted successfully.");
+            
+            new Thread(()->
+            {
+            	try {
+                	out.writeObject("Delete : ");
+    				out.writeObject(selectedTask);
+    				out.flush();
+    			} catch (IOException e) {
+    				// TODO Auto-generated catch block
+    				e.printStackTrace();
+    			}
+            }).start();
         }
     }
 
@@ -390,9 +571,22 @@ public class DashBoard extends Application {
         alert.setContentText(message);
         alert.showAndWait();
     }
-   
+    private void receiveTasksFromServer() {
+        new Thread(()->
+        {
+        	try {
+                out.writeObject("Retrieve : ");
+                out.flush();
+                tasksFromServer = (Set<Task>) in.readObject();
+                Platform.runLater(() -> {
+                	data.clear();
+                    data.addAll(tasksFromServer);
+                });
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+                Platform.runLater(() -> showAlert("Failed to load tasks from server."));
+            }
+        }).start();
+    }
 
-//    ?
-//   
-    
 }

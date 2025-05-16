@@ -10,9 +10,23 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.geometry.Pos;
 import javafx.geometry.Insets;
+
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.*;
 public class About extends Application{
 	private Socket socket;
+	private String username;
+	private ObjectInputStream in;
+	private ObjectOutputStream out;
+    public About(Socket socket,String name,ObjectInputStream input , ObjectOutputStream output) {
+		// TODO Auto-generated constructor stub
+    	this.username= name;
+    	this.socket=socket;
+    	this.in= input;
+    	this.out =output;
+	}
+	    
 	@Override
 	public void start(Stage primaryStage)
 	{
@@ -43,7 +57,7 @@ public class About extends Application{
 		Button back = new Button ("Back");
 		back.setOnAction(e->
 		{
-			DashBoard dashboard = new DashBoard(socket);
+			DashBoard dashboard = new DashBoard(socket,username,in,out);
 			dashboard.start(primaryStage);
 			
 		});
@@ -67,8 +81,5 @@ public class About extends Application{
         alert.showAndWait();
     }
 	
-//	public static void main (String [] args)
-//	{
-//		launch(args);
-//	}
+
 }

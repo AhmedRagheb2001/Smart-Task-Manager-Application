@@ -2,6 +2,7 @@ package Smart;
 
 import javafx.scene.Scene;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.stage.Stage;
 import javafx.scene.layout.GridPane;
 import javafx.scene.control.Label;
@@ -17,6 +18,9 @@ import java.io.*;
 import java.io.IOException;
 import java.net.*;
 public class LogIn extends Application {
+	 private Socket socket;
+	 private ObjectOutputStream out;
+	 private ObjectInputStream in;
 	
 	public static void main (String [] args)
 	{
@@ -26,6 +30,16 @@ public class LogIn extends Application {
 	{
 		
 		//First we will start with the sign in page 
+		try {
+				socket = new Socket("localhost", 8003);
+				out = new ObjectOutputStream(socket.getOutputStream());
+			    in = new ObjectInputStream(socket.getInputStream());
+	            
+		}
+		catch(IOException ex)
+		{
+			ex.printStackTrace();
+		}
 		
 		Label Name = new Label("Enter your username : ");
 		Label Password = new Label ("Enter your password : ");
@@ -63,35 +77,49 @@ public class LogIn extends Application {
 		    } else if (password.length() < 8) {
 		        showAlert("The password should be at least 8 characters.");
 		    } else {
-		        try (Socket socket = new Socket("localhost", 8003);
-		             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-		             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+		    	
+		    	new Thread(()->
+		    	{
+		    		try
+			    	{
 
-		            out.println("Login : " + name);
-		            String response = in.readLine();
+			            out.writeObject("Login : " + name);
+			            String response = null;
+						try {
+							response = (String)in.readObject();
+						} catch (ClassNotFoundException e1) {
+							
+							e1.printStackTrace();
+						}
 
-		            if ("OK".equalsIgnoreCase(response)) {
-		                Alert alert = new Alert(AlertType.INFORMATION);
-		                alert.setContentText("You have successfully logged in.");
-		                alert.showAndWait();
+						if ("OK".equalsIgnoreCase(response)) {
+						    Platform.runLater(() -> {
+						        Alert alert = new Alert(AlertType.INFORMATION);
+						        alert.setContentText("You have successfully logged in.");
+						        alert.showAndWait();
 
-		                DashBoard dash = new DashBoard(socket,name);
-		                dash.start(primaryStage);
-		            } else {
-		                showAlert("Username already in use. Try another one.");
-		            }
+						        DashBoard dash = new DashBoard(socket, name, in, out);
+						        dash.start(primaryStage);
+						    });
+						} else {
+						    Platform.runLater(() -> showAlert("Username already in use. Try another one."));
+						}
+			    	}
+			    	catch(IOException ex)
+			    	{
+			    		ex.printStackTrace();
+			    	}
+		    	}).start();
 
-		        } catch (IOException ex) {
-		            showAlert("Could not connect to the server. Is it running?");
-		            ex.printStackTrace();
-		        }
+		        
 		    }
 		});
 
 		
 		SignUp.setOnAction(e->
 		{
-			SignUp signup = new SignUp();
+			String name = Field1.getText();
+			SignUp signup = new SignUp(socket,name,in,out);
 			signup.start(primaryStage);
 		});
 		
