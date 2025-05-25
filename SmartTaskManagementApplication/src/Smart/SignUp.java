@@ -89,6 +89,8 @@ public class SignUp extends Application {
 
         // Show window
         Scene scene = new Scene(layout, 500, 300);
+        scene.getStylesheets().add("Style.css");
+
         primaryStage.setScene(scene);
         primaryStage.show();
     }

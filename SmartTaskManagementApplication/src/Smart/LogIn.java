@@ -130,7 +130,8 @@ public class LogIn extends Application {
 		primaryStage.getIcons().add(icon);
 		
 		Scene scene = new Scene(gridpane, 500 ,300);
-		scene.getStylesheets().add("Sign.css");
+		scene.getStylesheets().add("Style.css");
+
 		
 		primaryStage.setScene(scene);
 		primaryStage.setTitle("Smart Task Manager Application");

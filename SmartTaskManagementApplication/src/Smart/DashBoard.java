@@ -7,6 +7,7 @@ import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
@@ -26,6 +27,7 @@ import javafx.collections.FXCollections;
 import javafx.scene.control.DatePicker;
 import java.time.LocalDate;
 import java.util.Comparator;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -90,9 +92,9 @@ public class DashBoard extends Application {
     			//This is the left region
     			
     			Label label1 = new Label ("Welcome");
-    			label1.getStyleClass().add("label-style");
+    			label1.getStyleClass().add("left-label");
     			Label label2 = new Label (username);  			
-    			label2.getStyleClass().add("label-style");
+    			label2.getStyleClass().add("left-label");
     			
     			VBox vbox = new VBox (10,label1,label2);
     			vbox.setMinWidth(120);
@@ -102,6 +104,8 @@ public class DashBoard extends Application {
     			//Now we will create the top region , which the Menu bar 
     			
     			MenuBar menubar = new MenuBar();
+    			menubar.setMinHeight(35);
+    			menubar.setPrefHeight(40);
     			
     			Menu FileMenu = new Menu ("File");
     			Menu EditMenu = new Menu ("Edit");
@@ -273,15 +277,20 @@ public class DashBoard extends Application {
     			vbox2.setMinWidth(100);
     			vbox2.setPrefHeight(150);
     			
+    			VBox MenuVbox = new VBox ();
+    			MenuVbox.setSpacing(0);
+    			MenuVbox.setPadding(new Insets(0));
+    			MenuVbox.getChildren().addAll(menubar);
     			 
     			
     			root.setCenter(table);
     			root.setLeft(vbox);
-    			root.setTop(menubar);
+    			root.setTop(MenuVbox);
     			root.setRight(vbox2);
     			
     			Scene DashboardScene = new Scene (root,800,600);
-    			DashboardScene.getStylesheets().add("Dashboard.css");
+    			DashboardScene.getStylesheets().add("Style.css");
+
     			
     			LogOut.setOnAction(e->
     			{
@@ -425,26 +434,23 @@ public class DashBoard extends Application {
     	searchButton.setOnAction(e->
     	{
     		String name = Field.getText();
-    		new Thread(()->
-    		{
-    			
-    			try {
-    				out.writeObject("Search : "+name);
-    				
-					Task task =(Task)in.readObject();
-					label1.setText("The name of the task is : "+task.getName());
-					label2.setText("The description of the task is : "+task.getDescription());
-					label3.setText("The deadline of the task is : "+task.getDeadLine());
-					label4.setText("The status of the task is : "+task.getStatus());
-					label5.setText("The priority of the task is : "+task.getPriority());
-				} catch (ClassNotFoundException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-    			
+    		new Thread(() -> {
+    		    try {
+    		        out.writeObject("Search : " + name);
+    		        Task task = (Task) in.readObject();
+
+    		        // Update UI on JavaFX thread
+    		        Platform.runLater(() -> {
+    		            label1.setText("The name of the task is : " + task.getName());
+    		            label2.setText("The description of the task is : " + task.getDescription());
+    		            label3.setText("The deadline of the task is : " + task.getDeadLine());
+    		            label4.setText("The status of the task is : " + task.getStatus());
+    		            label5.setText("The priority of the task is : " + task.getPriority());
+    		        });
+
+    		    } catch (ClassNotFoundException | IOException e1) {
+    		        e1.printStackTrace();
+    		    }
     		}).start();
     	});
     	HBox hbox = new HBox (10,nameLabel,Field,searchButton);
@@ -545,24 +551,36 @@ public class DashBoard extends Application {
         if (selectedTask == null) {
             showAlert("Please select a task to delete.");
         } else {
-        	showAlert("You have deleted a task !");
-            data.remove(selectedTask);
-            table.refresh(); // Optional, but ensures UI updates immediately
-            showAlert("Task deleted successfully.");
-            
-            new Thread(()->
-            {
-            	try {
-                	out.writeObject("Delete : ");
-    				out.writeObject(selectedTask);
-    				out.flush();
-    			} catch (IOException e) {
-    				// TODO Auto-generated catch block
-    				e.printStackTrace();
-    			}
-            }).start();
+            // Confirmation alert before deletion
+            Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmAlert.setTitle("Confirm Deletion");
+            confirmAlert.setHeaderText(null);
+            confirmAlert.setContentText("Are you sure you want to delete this task?");
+
+            Optional<ButtonType> result = confirmAlert.showAndWait();
+
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                // User clicked OK, proceed with deletion
+                data.remove(selectedTask);
+                table.refresh();
+                showAlert("Task deleted successfully.");
+
+                new Thread(() -> {
+                    try {
+                        out.writeObject("Delete : ");
+                        out.writeObject(selectedTask);
+                        out.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
+            } else {
+                // User canceled
+                showAlert("Deletion canceled.");
+            }
         }
     }
+
 
 
     private void showAlert(String message) {

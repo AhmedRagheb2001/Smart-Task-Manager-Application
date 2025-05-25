@@ -70,6 +70,7 @@ public class About extends Application{
 		vbox.setAlignment(Pos.CENTER);
 		
 		Scene scene = new Scene (vbox,500,300);
+		scene.getStylesheets().add("Style.css");
 		primaryStage.setScene(scene);
 		primaryStage.show();
 	}

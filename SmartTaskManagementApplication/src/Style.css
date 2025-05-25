@@ -1,0 +1,163 @@
+/* ---------- Root Styling for All Windows ---------- */
+.root {
+    -fx-font-family: "Segoe UI", sans-serif;
+    -fx-background-color: linear-gradient(to bottom right, #dfeefb, #fefefe);
+    -fx-background-repeat: stretch;
+    -fx-background-size: cover;
+    -fx-padding: 0; /* Remove padding to avoid space around MenuBar */
+}
+
+/* ---------- General Labels ---------- */
+.label {
+    -fx-font-size: 15px;
+    -fx-text-fill: #2c3e50;
+}
+
+/* ---------- Left Region Labels (Custom Class) ---------- */
+.left-label {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
+/* ---------- Title Styling (First Label on Page) ---------- */
+.label:first-child {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1a5276;
+    -fx-padding: 0 0 20px 0;
+}
+
+/* ---------- TextFields & PasswordFields ---------- */
+.text-field, .password-field {
+    -fx-pref-width: 260px;
+    -fx-padding: 10px;
+    -fx-font-size: 14px;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-background-color: #ffffffdd;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 3, 0.3, 0, 1);
+    -fx-transition: all 0.2s ease-in-out;
+}
+
+.text-field:focused, .password-field:focused {
+    -fx-border-color: #3498db;
+    -fx-effect: dropshadow(three-pass-box, #a9cce3, 6, 0.4, 0, 2);
+}
+
+/* ---------- Buttons ---------- */
+.button {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10px 18px;
+    -fx-background-radius: 10px;
+    -fx-cursor: hand;
+    -fx-border-radius: 10px;
+    -fx-border-color: transparent;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 4, 0.3, 0, 2);
+    -fx-transition: all 0.3s ease-in-out;
+}
+
+.button:hover {
+    -fx-background-color: #2e86c1;
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
+}
+
+.button:pressed {
+    -fx-background-color: #21618c;
+    -fx-translate-y: 1px;
+}
+
+/* ---------- Layouts ---------- */
+.grid-pane {
+    -fx-hgap: 12px;
+    -fx-vgap: 14px;
+    -fx-alignment: center;
+}
+
+.vbox {
+    -fx-spacing: 25px;
+    -fx-alignment: center;
+    -fx-background-color: rgba(255, 255, 255, 0.85);
+    -fx-padding: 20px;
+    -fx-background-radius: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 6, 0.3, 0, 3);
+}
+
+/* ---------- Alerts & Dialogs ---------- */
+.dialog-pane {
+    -fx-font-size: 14px;
+    -fx-background-color: #f9f9f9;
+    -fx-border-color: #d5dbdb;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-padding: 15px;
+}
+
+.dialog-pane .content.label {
+    -fx-text-fill: #2c3e50;
+}
+
+/* ---------- Tooltips ---------- */
+.tooltip {
+    -fx-font-size: 13px;
+    -fx-background-color: #34495e;
+    -fx-text-fill: white;
+    -fx-padding: 6px 10px;
+    -fx-background-radius: 5px;
+}
+
+/* ---------- Input Validation Styling ---------- */
+.text-field:error, .password-field:error {
+    -fx-border-color: #e74c3c;
+    -fx-effect: dropshadow(gaussian, rgba(231,76,60,0.3), 5, 0.4, 0, 2);
+}
+
+/* ---------- MenuBar Styling ---------- */
+.menu-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.95);
+    -fx-border-color: #d0d3d4;
+    -fx-border-width: 0 0 1px 0;
+    -fx-font-size: 14px;
+    -fx-padding: 0 10px; /* No vertical padding to reduce height */
+    -fx-pref-height: 30px; /* Compact height */
+    -fx-min-width: 100%; /* Full width */
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 5, 0.4, 0, 2);
+}
+
+/* Menu styling */
+.menu {
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 4px 10px;
+    -fx-background-radius: 4px;
+}
+
+/* MenuItem hover effect */
+.menu-item:hover {
+    -fx-background-color: #ecf0f1;
+    -fx-text-fill: #2980b9;
+}
+
+.menu:hover {
+    -fx-background-color: #eaf2f8;
+    -fx-background-radius: 6px;
+}
+
+/* ---------- TableView Styling ---------- */
+/* Increase font size of TableView column headers */
+.table-view .column-header {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #222222;
+}
+
+/* Increase font size of TableView cells */
+.table-view .table-cell {
+    -fx-font-size: 14px;
+    -fx-text-fill: #000000;
+}

@@ -103,7 +103,7 @@ public class ClientHandler implements Runnable {
             synchronized (tasks) {
                 Task task = (Task) input.readObject();
                 tasks.add(task);
-                System.out.printf("Task with name : %s%n is added", task.getName());
+                System.out.printf("Task with name : %s is added by : %s%n", task.getName(),username);
 
                 // Save task to database
                 try (PreparedStatement stmt = conn.prepareStatement(
@@ -114,7 +114,7 @@ public class ClientHandler implements Runnable {
                     stmt.setString(4, task.getStatus().toString());  // Store enum value as string
                     stmt.setString(5, task.getPriority().toString()); // Store enum value as string
                     stmt.executeUpdate();
-                    System.out.println("Task inserted into database.");
+                    System.out.printf("Task with name : %s is inserted into database.%n",task.getName());
                 } catch (SQLException e) {
                     System.err.println("Database error while inserting task:");
                     e.printStackTrace();
@@ -154,7 +154,7 @@ public class ClientHandler implements Runnable {
 
             int rows = stmt.executeUpdate();
             if (rows > 0) {
-                System.out.println("Task updated in database.");
+                System.out.printf("Task with name : %s is updated in database by : %s%n",editTask.getName(),username);
             } else {
                 System.out.println("Task not found in database (not updated).");
             }
@@ -184,7 +184,7 @@ public class ClientHandler implements Runnable {
             stmt.setString(1, removedTask.getName());
             int rows = stmt.executeUpdate();
             if (rows > 0) {
-                System.out.println("Task deleted from database.");
+                System.out.printf("Task with name : %s deleted from database by : %s%n",removedTask.getName(),username);
             } else {
                 System.out.println("Task not found in database (not deleted).");
             }
