@@ -184,7 +184,7 @@ public class ClientHandler implements Runnable {
             stmt.setString(1, removedTask.getName());
             int rows = stmt.executeUpdate();
             if (rows > 0) {
-                System.out.printf("Task with name : %s deleted from database by : %s%n",removedTask.getName(),username);
+                System.out.printf("Task with name : %s is deleted from database by : %s%n",removedTask.getName(),username);
             } else {
                 System.out.println("Task not found in database (not deleted).");
             }
@@ -196,12 +196,14 @@ public class ClientHandler implements Runnable {
 
     public void saveHandler(Set<Task> tasks) {
         System.out.println("Name\tDescription\tDeadLine\tStatus\tPriority");
+        System.out.printf("%n");
         for (Task task : tasks) {
-            System.out.printf("The name of the Task is : %s\t", task.getName());
-            System.out.printf("The description of the Task is : %s\t", task.getDescription());
-            System.out.printf("The deadline of the Task is : %s\t", task.getDeadLine());
-            System.out.printf("The status of the Task is : %s\t", task.getStatus());
-            System.out.printf("The priority of the Task is : %s\t", task.getPriority());
+            System.out.printf("%s\t", task.getName());
+            System.out.printf("%s\t", task.getDescription());
+            System.out.printf("%s\t", task.getDeadLine());
+            System.out.printf("%s\t", task.getStatus());
+            System.out.printf("%s\t", task.getPriority());
+            System.out.printf("%n");
         }
     }
 
@@ -223,31 +225,4 @@ public class ClientHandler implements Runnable {
             e.printStackTrace();
         }
     }
-    public void ResearchHandler (ObjectOutputStream out ,Set<Task> tasks,String Line)
-    {
-    	try
-    	{
-    		
-	    	String name = Line.substring(9).trim();
-			for(Task task : tasks)
-			{
-				if(task.getName().equals(name))
-				{
-					
-						out.writeObject(task);
-						break;
-					
-				}
-				else
-				{
-					out.writeObject(null);
-				}
-			}
-    	}
-		catch (IOException e) {
-		
-		e.printStackTrace();
-	}
-    
-  }
 }

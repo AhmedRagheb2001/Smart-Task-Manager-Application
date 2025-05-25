@@ -163,7 +163,6 @@ public class DashBoard extends Application {
     			
     			Menu PriorityItem = new Menu("Priority");
     			Menu CompletionItem = new Menu ("Completion status");
-    			Menu OverdueItem = new Menu ("Overdue tasks");
     			
     			//Now these are the items in the sort sub Menu
     			MenuItem AscendingItem = new MenuItem("Ascending");
@@ -194,10 +193,24 @@ public class DashBoard extends Application {
     			{
     				ObservableList<Task> filteredData = FXCollections.observableArrayList(
     				        data.stream()
-    				            .filter(task -> task.getStatus() == Task.Status.PENDING) // Filter completed tasks
+    				            .filter(task -> task.getStatus() == Task.Status.PENDING) // Filter Pending tasks
     				            .collect(Collectors.toList())
     				    );
     				    table.setItems(filteredData);
+    			});
+    			MenuItem overDueItem = new MenuItem("Overdue");
+    			overDueItem.setOnAction(e->
+    			{
+    				ObservableList<Task> filteredData = FXCollections.observableArrayList(
+    				        data.stream()
+    				            .filter(task -> task.getStatus() == Task.Status.OVERDUE) // Filter Overdue tasks
+    				            .collect(Collectors.toList())
+    				    );
+    				    table.setItems(filteredData);
+    			});
+    			MenuItem AllItem2 = new MenuItem("All");
+    			AllItem2.setOnAction(e ->{
+    				table.setItems(data);
     			});
     			
     			MenuItem HighItem = new MenuItem ("High");
@@ -232,6 +245,11 @@ public class DashBoard extends Application {
     				    table.setItems(filteredData);
     				
     			});
+    			MenuItem AllItem1 = new MenuItem("All");
+    			AllItem1.setOnAction(e ->{
+    				table.setItems(data);
+    			});
+    			
     			// This is the item of the About Menu
     			MenuItem aboutItem = new MenuItem ("About");
     			aboutItem.setOnAction(e->
@@ -250,13 +268,13 @@ public class DashBoard extends Application {
     			sortItem.getItems().addAll(AscendingItem,DescendingItem);
     			
     			//Now we will map the items of the filter sub menu
-    			filterItem.getItems().addAll(PriorityItem,CompletionItem,OverdueItem);
+    			filterItem.getItems().addAll(PriorityItem,CompletionItem);
     			//Now we map the about menu item
     			AboutMenu.getItems().add(aboutItem);
     			
-    			CompletionItem.getItems().addAll(pendingItem,completeItem);
+    			CompletionItem.getItems().addAll(pendingItem,completeItem,overDueItem,AllItem2);
     			
-    			PriorityItem.getItems().addAll(LowItem,MediumItem,HighItem);
+    			PriorityItem.getItems().addAll(LowItem,MediumItem,HighItem,AllItem1);
     			
     			//Now we will create the right origin 
     			
@@ -360,6 +378,20 @@ public class DashBoard extends Application {
 		priorityComboBox.getItems().setAll(Task.Priority.values());
 		priorityComboBox.setValue(Task.Priority.MEDIUM);
 		
+		 // Add listener to the date picker to auto-set status
+	    deadLinePicker.valueProperty().addListener((obs, oldDate, newDate) -> {
+	        if (newDate != null) {
+	            if (newDate.isBefore(LocalDate.now())) {
+	                statusComboBox.setValue(Task.Status.OVERDUE);
+	                statusComboBox.setDisable(true);
+	            } else {
+	                // Enable status change if the date is valid
+	                statusComboBox.setDisable(false);
+	                statusComboBox.setValue(Task.Status.PENDING); // Or reset to default
+	            }
+	        }
+	    });
+		
 		
 		Button createButton = new Button ("Create");
 		createButton.setOnAction(e->
@@ -424,35 +456,40 @@ public class DashBoard extends Application {
     	Label nameLabel = new Label ("Enter the name of the task : ");
     	nameLabel.getStyleClass().add("label-form");
     	TextField Field = new TextField ();
-    	Label label1 = new Label();
-    	Label label2 = new Label();
-    	Label label3 = new Label();
-    	Label label4 = new Label();
-    	Label label5 = new Label();
+    	Label label1 = new Label("");
+    	Label label2 = new Label("");
+    	Label label3 = new Label("");
+    	Label label4 = new Label("");
+    	Label label5 = new Label("");
     	
-    	Button searchButton = new Button ("Search");
+    	Button searchButton = new Button ("Search : ");
     	searchButton.setOnAction(e->
     	{
     		String name = Field.getText();
-    		new Thread(() -> {
-    		    try {
-    		        out.writeObject("Search : " + name);
-    		        Task task = (Task) in.readObject();
+    		if (name.isEmpty()) {
+                showAlert("Please enter a task name.");
+                return;
+            }
 
-    		        // Update UI on JavaFX thread
-    		        Platform.runLater(() -> {
-    		            label1.setText("The name of the task is : " + task.getName());
-    		            label2.setText("The description of the task is : " + task.getDescription());
-    		            label3.setText("The deadline of the task is : " + task.getDeadLine());
-    		            label4.setText("The status of the task is : " + task.getStatus());
-    		            label5.setText("The priority of the task is : " + task.getPriority());
-    		        });
+            Optional<Task> result = data.stream()
+                .filter(task -> task.getName().equalsIgnoreCase(name))
+                .findFirst();
 
-    		    } catch (ClassNotFoundException | IOException e1) {
-    		        e1.printStackTrace();
-    		    }
-    		}).start();
-    	});
+            if (result.isPresent()) {
+                Task task = result.get();
+                label1.setText("Name: " + task.getName());
+                label2.setText("Description: " + task.getDescription());
+                label3.setText("Deadline: " + task.getDeadLine());
+                label4.setText("Status: " + task.getStatus());
+                label5.setText("Priority: " + task.getPriority());
+            } else {
+                label1.setText("Task not found.");
+                label2.setText("");
+                label3.setText("");
+                label4.setText("");
+                label5.setText("");
+            }
+        });
     	HBox hbox = new HBox (10,nameLabel,Field,searchButton);
     	hbox.setPadding(new Insets(10));
     	hbox.setAlignment(Pos.CENTER);
@@ -502,6 +539,10 @@ public class DashBoard extends Application {
             LocalDate deadLine = deadLinePicker.getValue();
             Task.Status status = statusComboBox.getValue();
             Task.Priority priority = priorityComboBox.getValue();
+            
+            if (deadLine.isBefore(LocalDate.now())) {
+                status = Task.Status.OVERDUE;
+            }
 
             if (name.isEmpty() || description.isEmpty()) {
                 showAlert("Please fill all fields.");
@@ -589,16 +630,33 @@ public class DashBoard extends Application {
         alert.setContentText(message);
         alert.showAndWait();
     }
+    
     private void receiveTasksFromServer() {
-        new Thread(()->
-        {
-        	try {
+        new Thread(() -> {
+            try {
                 out.writeObject("Retrieve : ");
                 out.flush();
                 tasksFromServer = (Set<Task>) in.readObject();
+
                 Platform.runLater(() -> {
-                	data.clear();
-                    data.addAll(tasksFromServer);
+                    data.clear();
+                    for (Task task : tasksFromServer) {
+                        if (task.getDeadLine().isBefore(LocalDate.now()) && task.getStatus() != Task.Status.OVERDUE) {
+                            task.setStatus(Task.Status.OVERDUE);
+
+                            // Notify the server about the update
+                            new Thread(() -> {
+                                try {
+                                    out.writeObject("Edit : ");
+                                    out.writeObject(task);
+                                    out.flush();
+                                } catch (IOException ex) {
+                                    ex.printStackTrace();
+                                }
+                            }).start();
+                        }
+                        data.add(task);
+                    }
                 });
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();

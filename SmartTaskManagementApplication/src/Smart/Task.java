@@ -3,7 +3,7 @@ import java.io.Serializable;
 import java.time.LocalDate;
 
 public class Task implements Serializable {
-	public enum Status {COMPLETED,PENDING};
+	public enum Status {COMPLETED,PENDING,OVERDUE};
 	public enum Priority {LOW,MEDIUM,HIGH};
 	private static final long serialVersionUID = 1L;
 	private LocalDate deadLine;

@@ -1,3 +1,7 @@
+/* Name : Duruike Kamsi Emmanuel, student number : 32320588
+ * Name : Ahmed EssamEldin Kamal Ragheb , student number : 32321538 
+ */
+
 package Smart;
 
 import javafx.scene.Scene;
